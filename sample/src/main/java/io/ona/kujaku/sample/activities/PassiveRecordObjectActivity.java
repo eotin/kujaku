@@ -20,6 +20,7 @@ import io.ona.kujaku.domain.Point;
 import io.ona.kujaku.exceptions.TrackingServiceNotInitializedException;
 import io.ona.kujaku.listeners.TrackingServiceListener;
 import io.ona.kujaku.sample.R;
+import io.ona.kujaku.services.FusedLocationTrackingService;
 import io.ona.kujaku.services.TrackingService;
 import io.ona.kujaku.services.configurations.TrackingServiceDefaultUIConfiguration;
 import io.ona.kujaku.services.options.TrackingServiceHighAccuracyOptions;
@@ -46,6 +47,8 @@ public class PassiveRecordObjectActivity extends BaseNavigationDrawerActivity im
         this.forceLocationBtn = findViewById(R.id.btn_passiveRecordObject_ForcePoint);
 
         kujakuMapView.initTrackingService(PassiveRecordObjectActivity.this,
+               // GPSLocationTrackingService.class,
+                FusedLocationTrackingService.class,
                 new TrackingServiceDefaultUIConfiguration(),
                 new TrackingServiceHighAccuracyOptions());
 

@@ -19,8 +19,11 @@
             android:name=".activities.MapActivity"
             android:exported="false" />
         <service android:name=".services.MapboxOfflineDownloaderService"/>
-        <service android:name=".services.TrackingService"
-            android:label="Tracking Service">
+        <service android:name=".services.GPSLocationTrackingService"
+            android:label="GPS Location Tracking Service">
+        </service>
+        <service android:name=".services.FusedLocationTrackingService"
+            android:label="Fused Location Tracking Service">
         </service>
         <receiver android:name=".receivers.KujakuNetworkChangeReceiver">
             <intent-filter>

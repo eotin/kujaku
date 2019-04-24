@@ -14,7 +14,6 @@ import android.graphics.Color;
 
 import android.location.Location;
 import android.location.LocationListener;
-import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.os.Binder;
 import android.os.Build;
@@ -46,8 +45,8 @@ import io.ona.kujaku.services.options.TrackingServiceSaveBatteryOptions;
  *
  * Created by Emmanuel Otin - eo@novel-t.ch 03/07/19.
  */
-public class TrackingService extends Service {
-    private final static String TAG = TrackingService.class.getSimpleName();
+public abstract class TrackingService extends Service {
+    protected final static String TAG = TrackingService.class.getSimpleName();
     private final static String PARTIAL_WAKE_LOCK_TAG = "TrackingService:PartialWakeLock";
 
     private final static String ACTIVITY_EXTRA_NAME = "launch_activity_class";
@@ -60,9 +59,6 @@ public class TrackingService extends Service {
 
     // Service status
     private static volatile int serviceStatus = TrackingServiceStatus.STOPPED;
-
-    // Location Manager
-    private volatile LocationManager locationManager;
 
     private volatile Handler gpsHandler;
     private Handler uiHandler;
@@ -77,7 +73,7 @@ public class TrackingService extends Service {
     private volatile Location firstLocationReceived = null ;
 
     // Tracks Options parameters
-    private TrackingServiceOptions trackingServiceOptions;
+    protected TrackingServiceOptions trackingServiceOptions;
 
     // Use for notification
     private PendingIntent notificationPendingIntent;
@@ -112,7 +108,6 @@ public class TrackingService extends Service {
         Log.d(TAG, "Initializing tracking service.");
 
         powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         storage = new TrackingStorage();
 
         recordedLocations = new ArrayList<>();
@@ -184,7 +179,7 @@ public class TrackingService extends Service {
                     this.getWakeLock().acquire();
                 }
 
-                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                if (isProviderEnabled()) {
                     Log.i(TAG, "Start tracking service thread.");
 
                     try {
@@ -227,18 +222,14 @@ public class TrackingService extends Service {
         }
     }
 
+    protected abstract boolean isProviderEnabled();
+
     @Override
     public void onDestroy() {
 
         Log.d(TAG, "Tracking service stopping.");
 
         try {
-            // Remove listeners
-            if (locationManager != null && locationListener != null) {
-                Log.d(TAG, "Remove location manager updates.");
-                locationManager.removeUpdates(locationListener);
-            }
-
             // Stop the service thread by posting a runnable in the loop.
             if (gpsHandler != null) {
                 Log.d(TAG, "Quitting looper");
@@ -331,19 +322,6 @@ public class TrackingService extends Service {
         return cls;
     }
 
-    /***
-     * Register LocationManager request locations updates
-     */
-    @SuppressWarnings({"MissingPermission"})
-    private void registerLocationListener() {
-        Log.d(TAG, "Register location update listener.");
-        // https://stackoverflow.com/questions/33022662/android-locationmanager-vs-google-play-services
-        // FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
-                trackingServiceOptions.getMinTime(),
-                trackingServiceOptions.getGpsMinDistance(),
-                locationListener, Looper.myLooper());
-    }
 
     /**
      * Set TrackingService Status
@@ -627,6 +605,47 @@ public class TrackingService extends Service {
         }
     };
 
+    protected abstract void registerLocationListener();
+
+    protected void onLocationChanged(Location location) {
+        Log.d(TAG, "GPS position received");
+        Log.d(TAG, "GPS Location ThreadID: " + android.os.Process.myTid());
+
+        // This should never happen, but just in case (we really don't
+        // want the service to crash):
+        if (location == null) {
+            Log.d(TAG, "No location available.");
+            return;
+        }
+
+        // First Location received
+        informFirstLocationReceivedListener(location);
+
+        // Ignore if the accuracy is too bad:
+        if (location.getAccuracy() > trackingServiceOptions.getMinAccuracy()) {
+            Log.d(TAG, "Track ignored because of accuracy.");
+            return;
+        }
+
+        if (lastBestLocation == null) {
+            lastBestLocation = location;
+        } else {
+            if (location.getAccuracy() <= lastBestLocation.getAccuracy()) {
+                // Remember this location is better than the previous one.
+                // lastBestLocation is rebased in overwritePendingLocation but an
+                // ignored location can have better accuracy
+                // even if not recorded
+
+                Log.d(TAG,
+                        "New location is used as latest best accuracy location.");
+                lastBestLocation = location;
+            }
+        }
+
+        // process location received from GPS
+        processLocation(location);
+    }
+
     /**
      * Call by service Thread to stop itself
      */
@@ -853,8 +872,8 @@ public class TrackingService extends Service {
      * @param connection
      * @param options
      */
-    public static void startAndBindService(Context context, Class<?> cls, ServiceConnection connection, TrackingServiceOptions options) {
-        Intent mIntent = TrackingService.getIntent(context, cls, options);
+    public static void startAndBindService(Context context, Class<?> cls, Class<?> trackingServiceClass, ServiceConnection connection, TrackingServiceOptions options) {
+        Intent mIntent = TrackingService.getIntent(context, cls, trackingServiceClass, options);
         TrackingService.bindService(context, mIntent, connection);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -883,8 +902,8 @@ public class TrackingService extends Service {
      * @param options
      * @return
      */
-    public static Intent getIntent(Context context, Class<?> cls, TrackingServiceOptions options) {
-        Intent mIntent = new Intent(context, TrackingService.class);
+    public static Intent getIntent(Context context, Class<?> cls, Class<?> trackingServiceClass, TrackingServiceOptions options) {
+       Intent mIntent = new Intent(context, trackingServiceClass);
 
         if (cls != null) {
             mIntent.putExtra(ACTIVITY_EXTRA_NAME, cls.getCanonicalName());
@@ -903,8 +922,8 @@ public class TrackingService extends Service {
      * @param context
      * @param connection
      */
-    public static void stopAndUnbindService(Context context, ServiceConnection connection) {
-        Intent mIntent = new Intent(context, TrackingService.class);
+    public static void stopAndUnbindService(Context context, Class<?> trackingServiceClass, ServiceConnection connection) {
+        Intent mIntent = new Intent(context, trackingServiceClass);
         context.stopService(mIntent);
         TrackingService.unBindService(context, connection);
     }

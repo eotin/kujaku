@@ -51,7 +51,7 @@ public class TrackingServiceTest {
 
     private Context context;
 
-    private ServiceController<TrackingService> controller;
+    private ServiceController<GPSLocationTrackingService> controller;
 
     private String connectionStatus = "";
 
@@ -94,8 +94,8 @@ public class TrackingServiceTest {
 
     @Test
     public void testTrackingServiceStatusAtCreation() {
-        controller = Robolectric.buildService(TrackingService.class,
-                TrackingService.getIntent(context, MapActivity.class, new TrackingServiceHighAccuracyOptions()));
+        controller = Robolectric.buildService(GPSLocationTrackingService.class,
+                TrackingService.getIntent(context, MapActivity.class, GPSLocationTrackingService.class, new TrackingServiceHighAccuracyOptions()));
 
         assertEquals(TrackingService.TrackingServiceStatus.STOPPED, TrackingService.getTrackingServiceStatus());
         assertFalse(TrackingService.isRunning());
@@ -106,8 +106,8 @@ public class TrackingServiceTest {
 
     @Test
     public void testStartingServiceWithoutGpsProvider() {
-        controller = Robolectric.buildService(TrackingService.class,
-                TrackingService.getIntent(context, MapActivity.class, new TrackingServiceHighAccuracyOptions()));
+        controller = Robolectric.buildService(GPSLocationTrackingService.class,
+                TrackingService.getIntent(context, MapActivity.class, GPSLocationTrackingService.class, new TrackingServiceHighAccuracyOptions()));
 
         controller.create().startCommand(0,0);
         assertEquals(TrackingService.TrackingServiceStatus.STOPPED_GPS, TrackingService.getTrackingServiceStatus());
@@ -117,8 +117,8 @@ public class TrackingServiceTest {
 
     @Test
     public void testStartingServiceWithGpsProvider() {
-        controller = Robolectric.buildService(TrackingService.class,
-                TrackingService.getIntent(context, MapActivity.class, new TrackingServiceHighAccuracyOptions()));
+        controller = Robolectric.buildService(GPSLocationTrackingService.class,
+                TrackingService.getIntent(context, MapActivity.class, GPSLocationTrackingService.class, new TrackingServiceHighAccuracyOptions()));
 
         LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         ShadowLocationManager shadowLocationManager = shadowOf(locationManager);
@@ -207,19 +207,19 @@ public class TrackingServiceTest {
         };
 
         assertEquals(connectionStatus, "");
-        TrackingService.startAndBindService(context, MapActivity.class, connection, new TrackingServiceHighAccuracyOptions());
+        TrackingService.startAndBindService(context, MapActivity.class, GPSLocationTrackingService.class, connection, new TrackingServiceHighAccuracyOptions());
         latch1.await();
         assertEquals(connectionStatus, "connected");
 
-        TrackingService.stopAndUnbindService(context, connection);
+        TrackingService.stopAndUnbindService(context, GPSLocationTrackingService.class, connection);
         latch2.await();
         assertEquals(connectionStatus, "disconnected");
     }
 
     @Test
     public void testServiceWithLocationInDistanceTolerance() throws InterruptedException {
-        controller = Robolectric.buildService(TrackingService.class,
-                TrackingService.getIntent(context, MapActivity.class, new TrackingServiceHighAccuracyOptions()));
+        controller = Robolectric.buildService(GPSLocationTrackingService.class,
+                TrackingService.getIntent(context, MapActivity.class, GPSLocationTrackingService.class, new TrackingServiceHighAccuracyOptions()));
 
         LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         ShadowLocationManager shadowLocationManager = shadowOf(locationManager);

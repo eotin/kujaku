@@ -183,6 +183,7 @@ public class KujakuMapView extends MapView implements IKujakuMapView, MapboxMap.
     private TrackingService trackingService = null;
     private boolean trackingServiceBound = false;
     private TrackingServiceListener trackingServiceListener = null ;
+    private Class<?> trackingServiceClass = null ;
     private TrackingServiceUIConfiguration trackingServiceUIConfiguration = null;
     private TrackingServiceOptions trackingServiceOptions = null;
     private boolean trackingServiceInitialized = false;
@@ -1351,9 +1352,11 @@ public class KujakuMapView extends MapView implements IKujakuMapView, MapboxMap.
      * @param options
      */
     public void initTrackingService(@NonNull TrackingServiceListener trackingServiceListener,
+                                    @NonNull Class<?> trackingServiceClass,
                                     TrackingServiceUIConfiguration uiConfiguration,
                                     TrackingServiceOptions options) {
         this.trackingServiceListener = trackingServiceListener;
+        this.trackingServiceClass = trackingServiceClass;
         this.trackingServiceUIConfiguration = uiConfiguration != null ? uiConfiguration : new TrackingServiceDefaultUIConfiguration();
         this.trackingServiceOptions = options != null ? options : new TrackingServiceHighAccuracyOptions();
         this.trackingServiceInitialized = true;
@@ -1370,7 +1373,7 @@ public class KujakuMapView extends MapView implements IKujakuMapView, MapboxMap.
         // TrackingService reconnection if connection was lost
         if (! trackingServiceBound && TrackingService.isRunning() && trackingServiceInitialized) {
             initTrackingServiceIcon();
-            return TrackingService.bindService(context, TrackingService.getIntent(context, null,null), connection);
+            return TrackingService.bindService(context, TrackingService.getIntent(context, null, this.trackingServiceClass, null), connection);
         } else {
             return false;
         }
@@ -1390,6 +1393,7 @@ public class KujakuMapView extends MapView implements IKujakuMapView, MapboxMap.
 
         TrackingService.startAndBindService(context,
                 cls,
+                this.trackingServiceClass,
                 connection,
                 this.trackingServiceOptions);
 
@@ -1406,7 +1410,7 @@ public class KujakuMapView extends MapView implements IKujakuMapView, MapboxMap.
         if (trackingServiceBound && trackingService != null) {
             List<Location> locations = trackingService.getRecordedLocations();
             trackingService.unregisterTrackingServiceListener();
-            TrackingService.stopAndUnbindService(context, connection);
+            TrackingService.stopAndUnbindService(context, this.trackingServiceClass, connection);
             trackingServiceBound = false;
             trackingService = null ;
             trackingServiceStatusButton.setImageResource(trackingServiceUIConfiguration.getStoppedDrawable());

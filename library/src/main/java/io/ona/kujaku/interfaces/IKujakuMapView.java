@@ -264,7 +264,6 @@ public interface IKujakuMapView extends IKujakuMapViewLowLevel {
 
     void removeLayer(@NonNull KujakuLayer kujakuLayer);
 
-
     /**
      * Init the TrackingService
      * You need to register a {@link TrackingServiceListener} to receive notifications as
@@ -275,10 +274,12 @@ public interface IKujakuMapView extends IKujakuMapViewLowLevel {
      *  You can pass a Tracking Service UI Configuration {@link TrackingServiceUIConfiguration} and options {@link TrackingServiceOptions}
      *
      * @param trackingServiceListener
+     * @param trackingServiceClass
      * @param uiConfiguration
      * @param options
      */
     void initTrackingService(@NonNull TrackingServiceListener trackingServiceListener,
+                             @NonNull Class<?> trackingServiceClass,
                              TrackingServiceUIConfiguration uiConfiguration,
                              TrackingServiceOptions options);
 
